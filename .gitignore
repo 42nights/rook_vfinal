@@ -1,0 +1,16 @@
+node_modules
+.next
+out
+dist
+data/rook.db
+data/rook.db-*
+data/workspaces
+*.tsbuildinfo
+next-env.d.ts
+.env
+.env.local
+.DS_Store
+
+# defensive: never commit any env file except the template
+.env*
+!.env.example

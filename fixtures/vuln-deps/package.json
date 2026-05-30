@@ -1,0 +1,10 @@
+{
+  "name": "vuln-deps-fixture",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Fixture with deliberately outdated, known-vulnerable dependencies for Rook's OSV supply-chain scan.",
+  "dependencies": {
+    "lodash": "4.17.11",
+    "minimist": "1.2.0"
+  }
+}

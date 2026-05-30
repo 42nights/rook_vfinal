@@ -1,0 +1,38 @@
+# Rook — one-command self-host. App + local Ollama (Gemma-class generation).
+# Exploits are host-locked HTTP requests (no host shell). Running Rook in this
+# container also contains the target apps it spawns during dynamic scans.
+services:
+  rook:
+    build: .
+    image: 42nights/rook:latest
+    ports: ["3000:3000"]
+    environment:
+      - ROOK_MODE=local
+      - LOCAL_LLM_URL=http://ollama:11434/v1
+      - LOCAL_LLM_MODEL=gemma2:9b
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      ollama-pull:
+        condition: service_completed_successfully
+
+  ollama:
+    image: ollama/ollama:latest
+    volumes: ["ollama:/root/.ollama"]
+    ports: ["11434:11434"]
+
+  ollama-pull:
+    image: ollama/ollama:latest
+    depends_on: [ollama]
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        until ollama list >/dev/null 2>&1; do echo "waiting for ollama…"; sleep 1; done
+        ollama pull gemma2:9b
+        echo "model ready"
+
+volumes:
+  ollama:

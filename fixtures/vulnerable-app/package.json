@@ -1,0 +1,9 @@
+{
+  "name": "vulnerable-app",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Deliberately vulnerable demo app for Rook scans. Do not deploy.",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

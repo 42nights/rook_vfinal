@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Rook — "breaks your app before someone else does". Offensive-security dark
+   theme: tinted black, coral/red accent, severity-coded signal colors. */
+
+@layer base {
+  .dark {
+    --bg: oklch(15% 0.012 25);
+    --bg-elev: oklch(18% 0.014 25);
+    --bg-sunken: oklch(12% 0.01 25);
+    --fg: oklch(95% 0.006 40);
+    --fg-muted: oklch(70% 0.012 30);
+    --fg-subtle: oklch(52% 0.012 30);
+    --border: oklch(26% 0.012 25);
+    --border-strong: oklch(36% 0.016 25);
+
+    --accent: oklch(68% 0.2 22);          /* coral/red */
+    --accent-fg: oklch(98% 0.01 25);
+    --accent-soft: oklch(30% 0.09 22);
+
+    --crit: oklch(64% 0.24 18);           /* critical: deep red */
+    --high: oklch(70% 0.19 40);           /* high: orange */
+    --med: oklch(82% 0.15 75);            /* medium: amber */
+    --low: oklch(74% 0.11 230);           /* low/info: azure */
+
+    --radius: 0.5rem;
+    --radius-lg: 0.875rem;
+    --radius-xl: 1.25rem;
+  }
+
+  :root { color-scheme: dark; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+    font-feature-settings: "ss01", "cv11", "calt";
+    -webkit-font-smoothing: antialiased;
+  }
+  * { border-color: var(--border); }
+  ::selection { background: color-mix(in oklab, var(--accent) 32%, transparent); }
+}
+
+@layer utilities {
+  .text-crit { color: var(--crit); }
+  .text-high { color: var(--high); }
+  .text-med { color: var(--med); }
+  .text-low { color: var(--low); }
+  .text-muted-foreground { color: var(--fg-muted); }
+  .bg-elev { background-color: var(--bg-elev); }
+  .bg-sunken { background-color: var(--bg-sunken); }
+}
+
+@keyframes rook-breathe {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--accent) 55%, transparent); }
+  50% { box-shadow: 0 0 0 5px color-mix(in oklab, var(--accent) 22%, transparent); }
+}
+.rook-live { animation: rook-breathe 1.8s ease-in-out infinite; }
+
+button:active:not(:disabled), [role="button"]:active:not(:disabled) { transform: scale(0.98); }
+
+.code-block {
+  font-family: var(--font-mono-family), ui-monospace, monospace;
+  font-size: 0.8rem; line-height: 1.55;
+  background: var(--bg-sunken); border: 1px solid var(--border); border-radius: var(--radius);
+  overflow-x: auto;
+}
+
+.prose-rook { color: var(--fg); line-height: 1.7; font-size: 0.95rem; }
+.prose-rook h2 { font-family: var(--font-serif); font-size: 1.3rem; font-weight: 600; margin: 1.4em 0 0.5em; }
+.prose-rook p { margin: 0 0 0.9em; }
+.prose-rook code { font-family: var(--font-mono-family), monospace; font-size: 0.85em; background: var(--bg-sunken); border: 1px solid var(--border); border-radius: 5px; padding: 0.1em 0.4em; color: color-mix(in oklab, var(--accent) 70%, var(--fg)); }
+.prose-rook pre { background: var(--bg-sunken); border: 1px solid var(--border); border-radius: var(--radius); padding: 1em; overflow-x: auto; }
+
+[data-sonner-toaster] { --normal-bg: var(--bg-elev); --normal-border: var(--border); --normal-text: var(--fg); }
