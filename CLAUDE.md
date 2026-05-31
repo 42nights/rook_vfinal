@@ -31,9 +31,12 @@ default.**
   untrusted. `lib/code/scrubber.ts` runs on stored code, finding title/summary,
   enrichment fields, and the exploit transcript output before any of it reaches
   the DB / GitHub issue / Otis handoff. Any new egress path must scrub first.
-- **Local-first.** LM Studio at `127.0.0.1:1234`; `lib/local-mode.ts` patches
-  fetch to block off-box egress (allowing only explicitly configured OTIS_URL /
-  GitHub hosts). Local-path scanning is gated by `ROOK_LOCAL_ROOTS`.
+- **Mode-aware (cloud or local).** Configured default is `ROOK_MODE=cloud` → all
+  reasoning runs on the **Anthropic API** (`ANTHROPIC_API_KEY`); Rook has no
+  embeddings, so cloud mode needs nothing local. `ROOK_MODE=local` still works
+  (on-device model); in local mode `lib/local-mode.ts` patches fetch to block
+  off-box egress (allowing only configured OTIS_URL / GitHub hosts). Local-path
+  scanning is gated by `ROOK_LOCAL_ROOTS` in both modes. Keep both modes working.
 
 ## Architecture — the 6-phase pipeline (`lib/scan-runner.ts`)
 1. **bootstrap** — clone, detect framework, start the target app in an ephemeral

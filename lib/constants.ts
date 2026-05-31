@@ -6,7 +6,9 @@ export const ROOK_MODE = (process.env.ROOK_MODE ?? "local").toLowerCase();
 export const LOCAL_MODE = ROOK_MODE !== "cloud";
 
 // --- Generation -------------------------------------------------------------
-export const GENERATION_MODEL = "claude-opus-4-7";
+// Anthropic model used in cloud mode. Override with GENERATION_MODEL (e.g.
+// claude-sonnet-4-6 for faster/cheaper scans — a scan makes many LLM calls).
+export const GENERATION_MODEL = process.env.GENERATION_MODEL ?? "claude-opus-4-7";
 
 export const LOCAL_LLM_URL =
   process.env.LOCAL_LLM_URL ?? "http://127.0.0.1:1234/v1";
