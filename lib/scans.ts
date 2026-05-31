@@ -129,11 +129,13 @@ export function insertFinding(f: Partial<FindingRow> & { scan_id: number; repo_i
   const safeCode = f.vulnerable_code ? scrubSecrets(f.vulnerable_code).text : null;
   const safeTitle = scrubSecrets(f.title).text;
   const safeSummary = f.summary ? scrubSecrets(f.summary).text : null;
+  // disconfirm_reason can quote a response snippet ("target returned …") — scrub it too.
+  const safeDisconfirmReason = f.disconfirm_reason ? scrubSecrets(f.disconfirm_reason).text : null;
   const vals = [
     f.scan_id, f.repo_id, f.category, safeTitle, f.severity ?? "medium", f.status ?? "candidate", f.confidence ?? 0.5,
     f.file_path ?? null, f.start_line ?? null, f.end_line ?? null, safeCode, safeSummary, f.impact ?? null,
     f.cvss_vector ?? null, f.cvss_score ?? null, f.exploit_script ?? null, f.exploit_transcript_json ?? null,
-    f.disconfirm_reason ?? null, f.recommended_fix ?? null, f.consistency_note ?? null, f.history_json ?? null,
+    safeDisconfirmReason, f.recommended_fix ?? null, f.consistency_note ?? null, f.history_json ?? null,
     f.rank_score ?? 0, f.source ?? "agent", now(),
   ];
   const info = db

@@ -105,7 +105,13 @@ export async function checkout(
   const git = simpleGit({ timeout: { block: cloneTimeout } });
   // Use an authenticated URL for private repos; keep the token out of source_url.
   const cloneUrl = ref.token ? `https://x-access-token:${ref.token}@github.com/${ref.owner}/${ref.name}.git` : ref.cloneUrl;
-  await git.clone(cloneUrl, dir, ["--depth", "1", "--single-branch"]);
+  try {
+    await git.clone(cloneUrl, dir, ["--depth", "1", "--single-branch"]);
+  } catch (e: any) {
+    // simple-git embeds the full clone command (incl. the x-access-token URL) in
+    // its error message. Strip the token before it can reach logs / DB / SSE.
+    throw new Error(String(e?.message ?? e).replace(/x-access-token:[^@\s]+@/gi, "x-access-token:«redacted»@"));
+  }
   const headSha = await safeHead(dir);
   let defaultBranch: string | null = null;
   try {

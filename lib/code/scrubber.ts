@@ -24,13 +24,19 @@ const RULES: Rule[] = [
   { name: "npm-token", re: /\bnpm_[A-Za-z0-9]{36}\b/g },
   { name: "huggingface", re: /\bhf_[A-Za-z0-9]{34,}\b/g },
   { name: "gitlab-pat", re: /\bglpat-[A-Za-z0-9_-]{20,}\b/g },
-  // credentials embedded in a connection string (postgres://user:pass@host AND
-  // password-only forms like redis://password@host). Username segment optional.
-  { name: "conn-string", re: /\b((?:postgres|postgresql|mysql|mongodb(?:\+srv)?|redis|amqp|rediss|https?):\/\/(?:[^:\s/@]+:)?)([^@\s/]{4,})(@)/gi },
+  // credentials in a connection string (postgres://user:pass@host, redis://pass@host,
+  // AND passwords containing '@'). Greedy to the LAST '@' before the host so an
+  // in-password '@' can't split the match and leak the tail.
+  { name: "conn-string", re: /\b((?:postgres|postgresql|mysql|mongodb(?:\+srv)?|redis|amqp|rediss|https?):\/\/)([^\s/]+)@/gi },
+  // Azure Storage account key (AccountKey=<base64>) — not a URL scheme and a
+  // mixed-case name, so the conn-string and ALL-CAPS rules both miss it.
+  { name: "azure-storage-key", re: /\b(AccountKey=)([A-Za-z0-9+/]{40,}={0,2})/g },
+  // Azure SAS signature parameter in a URL (?sig=… / &sig=…).
+  { name: "azure-sas", re: /([?&]sig=)([A-Za-z0-9%+/]{20,})/gi },
   // secret-named fields in a JSON body (HTTP response, config). Catches the
   // camelCase cloud-metadata creds the snake_case aws-secret rule misses:
-  // "SecretAccessKey":"…", "Token":"…", "AccessKeyId":"…".
-  { name: "json-secret-field", re: /("[A-Za-z0-9_]*(?:secret|password|passwd|credential|token|api[_]?key|access[_]?key|private[_]?key|secret[_]?key)[A-Za-z0-9_]*"\s*:\s*")([^"]{8,})(")/gi },
+  // "SecretAccessKey":"…", "Token":"…", "AccessKeyId":"…", "AccountKey":"…".
+  { name: "json-secret-field", re: /("[A-Za-z0-9_]*(?:secret|password|passwd|credential|token|api[_]?key|access[_]?key|account[_]?key|private[_]?key|secret[_]?key)[A-Za-z0-9_]*"\s*:\s*")([^"]{8,})(")/gi },
   // quoted secret-named assignments (lowercase-ish keyword names)
   { name: "secret-assignment", re: /\b((?:api[_-]?key|secret|password|passwd|token|client[_-]?secret|access[_-]?token|auth[_-]?token|refresh[_-]?token|bearer[_-]?token|private[_-]?key)\s*[=:]\s*["'])([^"'\n]{8,})(["'])/gi },
   // QUOTED ALL-CAPS credential-named assignments (VERCEL_TOKEN='…', HF_TOKEN='…').
@@ -60,7 +66,7 @@ export function scrubSecrets(text: string): { text: string; found: number } {
         // pure-numeric TTLs are not secrets: require length>=16, both a digit and
         // a letter, and NOT a lowercase kebab/snake dictionary phrase.
         const credentialLike =
-          val.length >= 16 && /[0-9]/.test(val) && /[a-zA-Z]/.test(val) && !/^[a-z0-9]+(?:[-_][a-z0-9]+)+$/.test(val);
+          val.length >= 16 && /[0-9]/.test(val) && /[a-zA-Z]/.test(val) && !/^[a-zA-Z0-9]+(?:[-_][a-zA-Z0-9]+)+$/.test(val);
         if (!credentialLike) return match;
         found++;
         return `${pre}«redacted»${post}`;
@@ -81,9 +87,14 @@ export function scrubSecrets(text: string): { text: string; found: number } {
         return `${pre}«redacted»`;
       }
       if (rule.name === "conn-string") {
-        const [pre, _pass, at] = groups as string[];
+        const [pre] = groups as string[];
         found++;
-        return `${pre}«redacted»${at}`;
+        return `${pre}«redacted»@`;
+      }
+      if (rule.name === "azure-storage-key" || rule.name === "azure-sas") {
+        const [pre] = groups as string[];
+        found++;
+        return `${pre}«redacted»`;
       }
       found++;
       return `«redacted:${rule.name}»`;

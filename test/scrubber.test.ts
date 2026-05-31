@@ -91,6 +91,24 @@ describe("scrubSecrets", () => {
     expect(text).toContain("redis://");
   });
 
+  it("fully redacts a connection-string password containing '@' (round-10)", () => {
+    const { text } = scrubSecrets("postgresql://admin:p@ssw0rd@prod.internal/db");
+    expect(text).not.toContain("ssw0rd");
+    expect(text).not.toContain("p@ssw0rd");
+    expect(text).toContain("@prod.internal/db");
+  });
+
+  it("redacts Azure Storage AccountKey and SAS sig (round-10)", () => {
+    const acct = "DefaultEndpointsProtocol=https;AccountName=store;AccountKey=dGVzdGtleXZhbHVlMTIzNDU2Nzg5MGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6QUJDREVGRw==;EndpointSuffix=core.windows.net";
+    const out1 = scrubSecrets(acct).text;
+    expect(out1).not.toContain("dGVzdGtleXZhbHVlMTIzNDU2Nzg5MGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6QUJDREVGRw==");
+    expect(out1).toContain("AccountKey=");
+    const sas = "https://store.blob.core.windows.net/c/b?sv=2021&sig=abcDEF123ghiJKL456mnoPQR789stu%2BvwX&se=2026";
+    const out2 = scrubSecrets(sas).text;
+    expect(out2).not.toContain("abcDEF123ghiJKL456mnoPQR789stu%2BvwX");
+    expect(out2).toContain("sig=");
+  });
+
   it("scrub-then-cap leaves no partial secret at a truncation boundary", () => {
     // Simulates the enrich clean() invariant: a secret near the cap must be fully
     // redacted, never sliced into an unmatched prefix. scrubSecrets handles the
