@@ -119,3 +119,21 @@ export const getFindingCounts = query({
     return { shipped, verified, dropped };
   },
 });
+
+export const remove = mutation({
+  args: { id: v.id("scans") },
+  handler: async (ctx, { id }) => {
+    const findings = await ctx.db
+      .query("findings")
+      .withIndex("by_scan", (q) => q.eq("scan_id", id))
+      .collect();
+    for (const f of findings) await ctx.db.delete(f._id);
+    const logs = await ctx.db
+      .query("scan_log")
+      .withIndex("by_scan_ts", (q) => q.eq("scan_id", id))
+      .collect();
+    for (const l of logs) await ctx.db.delete(l._id);
+    await ctx.db.delete(id);
+    return true;
+  },
+});
