@@ -377,7 +377,13 @@ export type ScanLogRow = {
 };
 
 export async function getScanLog(scanId: string): Promise<ScanLogRow[]> {
-  const docs = await convex.query(api.scanLog.listByScan, { scan_id: scanId });
+  // listByScan may not exist in older Convex deployments — return empty rather than 500.
+  let docs: unknown[];
+  try {
+    docs = await convex.query(api.scanLog.listByScan, { scan_id: scanId });
+  } catch {
+    return [];
+  }
   return (docs as ScanLogRow[]).map((d) => ({
     _id: d._id as unknown as string,
     scan_id: d.scan_id,
