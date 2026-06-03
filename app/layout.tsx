@@ -4,15 +4,29 @@ import { GeistMono } from "geist/font/mono";
 import { Newsreader } from "next/font/google";
 import { Toaster } from "sonner";
 import { Shell } from "@/components/Shell";
-import { PreviewBanner } from "@/components/PreviewBanner";
 import { tenant } from "@/lib/tenant";
 import "./globals.css";
 
 const newsreader = Newsreader({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-serif", display: "swap" });
 
+const ROOK_DESC = `${tenant.displayName} breaks your app before someone else does — finds vulnerabilities and proves each one with a real working exploit.`;
+
 export const metadata: Metadata = {
+  metadataBase: new URL("https://rook-roan.vercel.app"),
   title: `${tenant.displayName} — AI red-teamer`,
-  description: `${tenant.displayName} breaks your app before someone else does. Finds vulns, proves them with working exploits. Local-first.`,
+  description: ROOK_DESC,
+  openGraph: {
+    title: `${tenant.displayName} — AI red-teamer`,
+    description: ROOK_DESC,
+    url: "https://rook-roan.vercel.app",
+    siteName: "42nights",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${tenant.displayName} — AI red-teamer`,
+    description: ROOK_DESC,
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -31,7 +45,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen antialiased bg-[var(--bg)] text-[var(--fg)]">
         <Shell>{children}</Shell>
         <Toaster position="top-right" theme="dark" />
-        <PreviewBanner />
       </body>
     </html>
   );
