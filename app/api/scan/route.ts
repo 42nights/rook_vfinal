@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { parseRepoRef, isRefAllowedFromApi } from "@/lib/git";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,7 +21,3 @@ export async function GET(req: NextRequest) {
   if (!scan) return NextResponse.json({ error: "not found" }, { status: 404 });
   return NextResponse.json({ scan, last: lastProgress(id) });
 }
-
-// Re-export parseRepoRef / isRefAllowedFromApi so tree-shaking can eliminate
-// the import if a bundler is aggressive — keeps the module clean.
-export { parseRepoRef, isRefAllowedFromApi };
