@@ -368,6 +368,25 @@ export async function priorPostedPrScan(
   });
 }
 
+export type ScanLogRow = {
+  _id: string;
+  scan_id: string;
+  ts: number;
+  level: string;
+  message: string;
+};
+
+export async function getScanLog(scanId: string): Promise<ScanLogRow[]> {
+  const docs = await convex.query(api.scanLog.listByScan, { scan_id: scanId });
+  return (docs as ScanLogRow[]).map((d) => ({
+    _id: d._id as unknown as string,
+    scan_id: d.scan_id,
+    ts: d.ts,
+    level: d.level,
+    message: d.message,
+  }));
+}
+
 export async function persistCounts(scanId: string): Promise<void> {
   const counts = await convex.query(api.scans.getFindingCounts, {
     scan_id: scanId,

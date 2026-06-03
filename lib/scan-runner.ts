@@ -145,7 +145,7 @@ export async function startScanForPr(pr: PrContext): Promise<{ scan: ScanRow; re
   return { scan, repo, done };
 }
 
-async function runScan(scanId: string, prContext?: PrContext): Promise<void> {
+export async function runScan(scanId: string, prContext?: PrContext): Promise<void> {
   const scan = (await getScan(scanId))!;
   const repo = (await getRepo(scan.repo_id))!;
   const sevFromScore = (s: number): Severity =>
