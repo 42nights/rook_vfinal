@@ -4,6 +4,7 @@ import { GeistMono } from "geist/font/mono";
 import { Newsreader } from "next/font/google";
 import { Toaster } from "sonner";
 import { Shell } from "@/components/Shell";
+import { PreviewBanner } from "@/components/PreviewBanner";
 import { tenant } from "@/lib/tenant";
 import "./globals.css";
 
@@ -30,6 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen antialiased bg-[var(--bg)] text-[var(--fg)]">
         <Shell>{children}</Shell>
         <Toaster position="top-right" theme="dark" />
+        <PreviewBanner />
       </body>
     </html>
   );
