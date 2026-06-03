@@ -11,7 +11,7 @@
     "test": "vitest run",
     "migrate": "tsx scripts/migrate.ts",
     "scan": "tsx scripts/scan.ts",
-    "worker": "tsx scripts/worker.ts",
+    "worker": "node --env-file=.env.local -r tsx/cjs scripts/worker.ts",
     "scan-pr": "tsx scripts/scan-pr.ts",
     "smoke": "tsx scripts/smoke.ts"
   },
