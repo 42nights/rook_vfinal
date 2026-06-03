@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getFinding } from "@/lib/scans";
 import { getRepo } from "@/lib/repos";
-import { parseRepoRef, repoDir } from "@/lib/git";
-import { detectFramework, startTarget } from "@/lib/scanner/bootstrap";
-import { runHttpExploit, type ExploitSpec } from "@/lib/sandbox/runner";
+import type { ExploitSpec } from "@/lib/sandbox/runner";
 import { safeParse } from "@/lib/utils";
 
 export const runtime = "nodejs";
@@ -53,6 +51,10 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
       return NextResponse.json({ command: finding.exploit_script, output: transcript?.output ?? finding.vulnerable_code, live: false });
     }
 
+    // VM-only deps (filesystem clone + subprocess target) are loaded lazily so
+    // the route still imports on read-only serverless; only the live-target
+    // replay path below needs them.
+    const { parseRepoRef, repoDir } = await import("@/lib/git");
     const dir = repoDir(repo) ?? (parseRepoRef(repo.source_url)?.local ? repo.source_url : null);
     if (!dir) return NextResponse.json({ error: "workspace gone — re-scan to replay" }, { status: 409 });
 
@@ -61,6 +63,8 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
       return NextResponse.json({ error: "too many concurrent replays — try again shortly" }, { status: 429 });
     }
     try {
+      const { detectFramework, startTarget } = await import("@/lib/scanner/bootstrap");
+      const { runHttpExploit } = await import("@/lib/sandbox/runner");
       const fw = detectFramework(dir);
       const target = await startTarget(dir, fw, { port });
       if (!target) return NextResponse.json({ error: "could not start the target app to replay against" }, { status: 409 });

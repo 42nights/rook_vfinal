@@ -49,9 +49,15 @@ export function normalizeFullName(owner: string, name: string): string {
 }
 
 export async function getRepo(id: string): Promise<RepoRow | null> {
-  const doc = await convex.query(api.repos.getById, {
-    id: id as Id<"repos">,
-  });
+  // A malformed / wrong-table id string fails Convex's v.id("repos") validation
+  // and throws rather than returning null; treat that as not-found so callers'
+  // null guards run instead of surfacing a 500.
+  let doc;
+  try {
+    doc = await convex.query(api.repos.getById, { id: id as Id<"repos"> });
+  } catch {
+    return null;
+  }
   return doc ? toRow(doc as ConvexRepoDoc) : null;
 }
 

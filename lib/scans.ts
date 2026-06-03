@@ -194,9 +194,15 @@ export async function createScan(repoId: string): Promise<ScanRow> {
 }
 
 export async function getScan(id: string): Promise<ScanRow | null> {
-  const doc = await convex.query(api.scans.getById, {
-    id: id as Id<"scans">,
-  });
+  // A malformed / wrong-table id string fails Convex's v.id("scans") validation
+  // and throws rather than returning null; treat that as not-found so callers'
+  // null guards (notFound()/404) run instead of surfacing a 500.
+  let doc;
+  try {
+    doc = await convex.query(api.scans.getById, { id: id as Id<"scans"> });
+  } catch {
+    return null;
+  }
   return doc ? scanToRow(doc as ConvexScanDoc) : null;
 }
 
@@ -323,9 +329,14 @@ export async function updateFinding(
 }
 
 export async function getFinding(id: string): Promise<FindingRow | null> {
-  const doc = await convex.query(api.findings.getById, {
-    id: id as Id<"findings">,
-  });
+  // See getScan: a bad id string fails v.id("findings") validation and throws;
+  // treat as not-found so callers' null guards run.
+  let doc;
+  try {
+    doc = await convex.query(api.findings.getById, { id: id as Id<"findings"> });
+  } catch {
+    return null;
+  }
   return doc ? findingToRow(doc as ConvexFindingDoc) : null;
 }
 

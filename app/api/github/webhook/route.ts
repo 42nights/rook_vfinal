@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySignature } from "@/lib/github/webhook";
 import { githubAppConfig } from "@/lib/github/app";
-import { startScan } from "@/lib/scan-runner";
-import { runPrPipeline } from "@/lib/pr-pipeline";
 import { parsePullRequestTrigger } from "@/lib/github/pr-event";
-import { parseRepoRef, isRefAllowedFromApi } from "@/lib/git";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,6 +42,9 @@ export async function POST(req: NextRequest) {
     const trigger = parsePullRequestTrigger(payload);
     if (trigger.kind === "ignore") return NextResponse.json({ ok: true, ignored: trigger.reason });
     const input = trigger.input;
+    // VM-only deps (filesystem clone + subprocess scan) are loaded lazily so the
+    // route still imports on read-only serverless; only the actual scan needs them.
+    const { runPrPipeline } = await import("@/lib/pr-pipeline");
     void runPrPipeline(input).catch((e) =>
       console.error(`[webhook] PR pipeline failed for ${input.owner}/${input.name}#${input.prNumber}:`, e?.message ?? e),
     );
@@ -61,6 +61,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, ignored: event });
   }
 
+  const { parseRepoRef, isRefAllowedFromApi } = await import("@/lib/git");
+  const { startScan } = await import("@/lib/scan-runner");
   const scanning: string[] = [];
   const deferred: string[] = [];
   for (const fn of targets) {

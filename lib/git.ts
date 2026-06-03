@@ -4,9 +4,16 @@ import { simpleGit } from "simple-git";
 
 const DATA_DIR = path.resolve(process.cwd(), "data");
 const WORKSPACES_DIR = path.join(DATA_DIR, "workspaces");
-if (!fs.existsSync(WORKSPACES_DIR)) fs.mkdirSync(WORKSPACES_DIR, { recursive: true });
 
 const PATHS = { DATA_DIR, WORKSPACES_DIR };
+
+// Lazily create the workspaces dir only when we actually clone. Doing this at
+// module-eval time crashes the import on read-only serverless filesystems
+// (Vercel allows writes only under /tmp), which would 500 any route that
+// transitively imports this module.
+function ensureWorkspacesDir(): void {
+  if (!fs.existsSync(WORKSPACES_DIR)) fs.mkdirSync(WORKSPACES_DIR, { recursive: true });
+}
 
 // Resolve a user-supplied repo reference into { owner, name, cloneUrl } or a
 // local path. Accepts: full GitHub URLs, github.com/owner/repo, owner/repo, and
@@ -98,6 +105,7 @@ export async function checkout(
     const headSha = await safeHead(ref.cloneUrl);
     return { dir: ref.cloneUrl, headSha, defaultBranch: null };
   }
+  ensureWorkspacesDir();
   const dir = workspacePath(ref.owner, ref.name);
   if (fs.existsSync(dir)) {
     fs.rmSync(dir, { recursive: true, force: true });
@@ -150,6 +158,7 @@ export async function checkoutPr(
   onLog?: (msg: string) => void,
 ): Promise<PrCheckoutResult> {
   if (ref.local) throw new Error("checkoutPr is for remote (GitHub) refs only");
+  ensureWorkspacesDir();
   const dir = workspacePath(ref.owner, ref.name);
   if (fs.existsSync(dir)) fs.rmSync(dir, { recursive: true, force: true });
   fs.mkdirSync(dir, { recursive: true });
