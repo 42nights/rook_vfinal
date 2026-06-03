@@ -1,0 +1,17 @@
+# Rook GitHub App manifest (spec §7). Register the App from a single URL by
+# POSTing this to https://github.com/settings/apps/new (or an org equivalent).
+# Served statically at /manifest.yml so the marketing-site install flow is one
+# click. Scopes are minimal — exactly what the PR commenter + Otis bridge need.
+name: Rook
+description: AI red-teamer that finds vulns in your PRs before attackers do — and proves each one with a working exploit.
+url: https://rook.42nights.dev
+public: false # private until launch
+hook_attributes:
+  url: https://rook.42nights.dev/api/github/webhook
+default_permissions:
+  contents: read # clone repo at PR head
+  pull_requests: write # post review + inline comments
+  issues: write # open an issue when "Have Otis fix this" is clicked
+  metadata: read # required, standard
+default_events:
+  - pull_request

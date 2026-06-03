@@ -10,20 +10,15 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-// One live replay per finding at a time — replaying starts a target subprocess,
-// so concurrent replays of the same finding would spawn multiple targets.
 declare global {
   // eslint-disable-next-line no-var
-  var __rook_replay_inflight: Set<number> | undefined;
+  var __rook_replay_inflight: Set<string> | undefined;
   // eslint-disable-next-line no-var
   var __rook_replay_ports: Set<number> | undefined;
 }
-function replayInflight(): Set<number> {
+function replayInflight(): Set<string> {
   return (globalThis.__rook_replay_inflight ??= new Set());
 }
-// Each live replay needs its own port so two different findings replaying at
-// once don't both bind 4599. Scan targets occupy 4599-5598 (4599 + scanId%1000),
-// so replays draw from 5600-5699.
 function acquireReplayPort(): number | null {
   const used = (globalThis.__rook_replay_ports ??= new Set());
   for (let p = 5600; p <= 5699; p++) {
@@ -38,23 +33,19 @@ function releaseReplayPort(port: number): void {
   globalThis.__rook_replay_ports?.delete(port);
 }
 
-// "Replay the exploit" (spec §6.3): spin the target back up and re-send the
-// captured HTTP exploit live, returning the response. The demo moment.
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const findingId = Number(id);
-  // ATOMIC check-and-acquire — no await between has() and add(), so two
-  // concurrent requests can't both pass and both spawn a target.
+  const findingId = id;
   if (replayInflight().has(findingId)) {
     return NextResponse.json({ error: "a replay for this finding is already running" }, { status: 409 });
   }
   replayInflight().add(findingId);
   try {
-    const finding = getFinding(findingId);
+    const finding = await getFinding(findingId);
     if (!finding || !finding.exploit_script) {
       return NextResponse.json({ error: "no replayable exploit" }, { status: 404 });
     }
-    const repo = getRepo(finding.repo_id);
+    const repo = await getRepo(finding.repo_id);
     if (!repo) return NextResponse.json({ error: "repo not found" }, { status: 404 });
 
     const transcript = finding.exploit_transcript_json ? safeParse(finding.exploit_transcript_json) : null;
@@ -93,4 +84,3 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     replayInflight().delete(findingId);
   }
 }
-

@@ -7,8 +7,12 @@ import { timeAgo } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-export default function ReposPage() {
-  const repos = listRepos();
+export default async function ReposPage() {
+  const repos = await listRepos();
+  const repoScans = await Promise.all(
+    repos.map((r) => listScansForRepo(r._id)),
+  );
+
   return (
     <div className="mx-auto max-w-3xl px-5 sm:px-6 py-12">
       <h1 className="font-serif text-3xl text-[var(--fg)]">Repositories</h1>
@@ -18,18 +22,18 @@ export default function ReposPage() {
 
       <div className="mt-8 space-y-2">
         {repos.length === 0 && <p className="text-sm text-[var(--fg-subtle)]">No repos yet.</p>}
-        {repos.map((r) => {
-          const scans = listScansForRepo(r.id);
+        {repos.map((r, i) => {
+          const scans = repoScans[i];
           const last = scans[0];
           return (
-            <div key={r.id} className="flex items-center gap-3 rounded-lg border border-border bg-[var(--bg-elev)] px-4 py-3">
+            <div key={r._id} className="flex items-center gap-3 rounded-lg border border-border bg-[var(--bg-elev)] px-4 py-3">
               <FolderGit2 className="h-4 w-4 text-[var(--fg-muted)] shrink-0" />
               <div className="min-w-0 flex-1">
                 <div className="font-mono text-sm text-[var(--fg)] truncate">{r.owner}/{r.name}</div>
                 <div className="text-xs text-[var(--fg-subtle)]">{scans.length} scan{scans.length === 1 ? "" : "s"}{last ? ` · last ${timeAgo(last.updated_at)}` : ""}</div>
               </div>
               {last && (
-                <Link href={`/scans/${last.id}`} className="text-xs text-[var(--accent)] hover:underline">latest scan →</Link>
+                <Link href={`/scans/${last._id}`} className="text-xs text-[var(--accent)] hover:underline">latest scan →</Link>
               )}
             </div>
           );

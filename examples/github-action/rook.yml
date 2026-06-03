@@ -1,0 +1,40 @@
+# Rook — self-hosted PR security scan (spec §2 Option A / §9.4).
+#
+# Drop this at .github/workflows/rook.yml in YOUR repo to run Rook on your own
+# infrastructure with your own Anthropic key. Same PR-focused scan + comment
+# output as the hosted GitHub App; nothing leaves your runner except the LLM
+# calls you pay for. (The hosted App at https://rook.42nights.dev is simpler —
+# no key to manage — but this keeps all repo data on your side.)
+#
+# Required repo secret: ANTHROPIC_API_KEY. GITHUB_TOKEN is provided automatically.
+name: Rook security scan
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  rook:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run Rook PR scan
+        run: |
+          docker run --rm \
+            -e ROOK_MODE=cloud \
+            -e ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }} \
+            -e GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} \
+            -e GITHUB_REPOSITORY=${{ github.repository }} \
+            -e PR_NUMBER=${{ github.event.pull_request.number }} \
+            -e HEAD_SHA=${{ github.event.pull_request.head.sha }} \
+            -e BASE_SHA=${{ github.event.pull_request.base.sha }} \
+            -e ROOK_OTIS_CTA=false \
+            42nights/rook:latest scan-pr
+          # The scan runs in an ephemeral container with its own throwaway DB, so
+          # there is no persistent backend to serve "Have Otis fix this" / "Open
+          # in Rook" links — ROOK_OTIS_CTA=false omits them. The comments still
+          # carry the full finding (severity, fix, exploit). To enable the Otis
+          # loop, run Rook as a persistent service and point ROOK_PUBLIC_URL at it.

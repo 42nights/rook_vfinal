@@ -1,7 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import { simpleGit } from "simple-git";
-import { PATHS } from "./db";
+
+const DATA_DIR = path.resolve(process.cwd(), "data");
+const WORKSPACES_DIR = path.join(DATA_DIR, "workspaces");
+if (!fs.existsSync(WORKSPACES_DIR)) fs.mkdirSync(WORKSPACES_DIR, { recursive: true });
+
+const PATHS = { DATA_DIR, WORKSPACES_DIR };
 
 // Resolve a user-supplied repo reference into { owner, name, cloneUrl } or a
 // local path. Accepts: full GitHub URLs, github.com/owner/repo, owner/repo, and
@@ -128,4 +133,60 @@ async function safeHead(dir: string): Promise<string | null> {
   } catch {
     return null;
   }
+}
+
+export type PrCheckoutResult = { dir: string; headSha: string; changedFiles: string[] };
+
+// Check out a pull request and compute its changed files. Fetches ONLY the two
+// commits we need (PR head + base) shallowly — fast even on a huge repo — then
+// `git diff base head --name-only` for the touched paths. The working tree is
+// left at the PR head so the dynamic phase runs the PR's code.
+//
+// `token` (App installation token) authenticates private-repo fetches and is
+// kept out of any stored URL; clone-time errors are scrubbed of it.
+export async function checkoutPr(
+  ref: RepoRef,
+  pr: { headSha: string; baseSha: string },
+  onLog?: (msg: string) => void,
+): Promise<PrCheckoutResult> {
+  if (ref.local) throw new Error("checkoutPr is for remote (GitHub) refs only");
+  const dir = workspacePath(ref.owner, ref.name);
+  if (fs.existsSync(dir)) fs.rmSync(dir, { recursive: true, force: true });
+  fs.mkdirSync(dir, { recursive: true });
+  const fetchTimeout = Number(process.env.GIT_CLONE_TIMEOUT_MS ?? 300000);
+  const git = simpleGit(dir, { timeout: { block: fetchTimeout } });
+  const remoteUrl = ref.token
+    ? `https://x-access-token:${ref.token}@github.com/${ref.owner}/${ref.name}.git`
+    : ref.cloneUrl;
+  const scrub = (s: string) => s.replace(/x-access-token:[^@\s]+@/gi, "x-access-token:«redacted»@");
+  onLog?.(`fetching PR head ${pr.headSha.slice(0, 8)} + base ${pr.baseSha.slice(0, 8)}`);
+  try {
+    await git.init();
+    await git.addRemote("origin", remoteUrl);
+    // Fetch the two specific commits (GitHub allows want-by-sha for reachable
+    // commits — PR head/base always are). Shallow: just the trees we diff.
+    await git.fetch(["--depth", "1", "origin", pr.headSha, pr.baseSha]);
+    await git.raw(["checkout", "--detach", pr.headSha]);
+  } catch (e: any) {
+    throw new Error(scrub(String(e?.message ?? e)));
+  }
+  // Two-dot diff: compares the two trees directly (no merge-base needed, so it
+  // works with the shallow fetch above). On failure, fall back to diffing the
+  // head against the empty tree — i.e. ALL files at head — so a diff hiccup
+  // degrades to a full focused scan rather than silently scanning nothing.
+  const EMPTY_TREE = "4b825dc642cb6eb9a060e54bf8d69288fbee4904";
+  let changedFiles: string[] = [];
+  try {
+    const out = await git.raw(["diff", "--name-only", pr.baseSha, pr.headSha]);
+    changedFiles = out.split("\n").map((s) => s.trim()).filter(Boolean);
+  } catch (e: any) {
+    onLog?.(`diff vs base failed (${scrub(String(e?.message ?? e))}); falling back to all files at head`);
+    try {
+      const out = await git.raw(["diff", "--name-only", EMPTY_TREE, pr.headSha]);
+      changedFiles = out.split("\n").map((s) => s.trim()).filter(Boolean);
+    } catch {
+      /* leave empty — runScan will report no findings */
+    }
+  }
+  return { dir, headSha: pr.headSha, changedFiles };
 }

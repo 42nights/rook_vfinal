@@ -17,7 +17,7 @@ const ALIASES: Record<string, string> = { enriching: "exploiting" };
 
 type Evt = { status: string; phase: string; progress: number; done?: boolean; error?: string };
 
-export function ScanProgress({ scanId, initialStatus }: { scanId: number; initialStatus: string }) {
+export function ScanProgress({ scanId, initialStatus }: { scanId: string; initialStatus: string }) {
   const router = useRouter();
   const terminal = initialStatus === "done" || initialStatus === "error";
   const [evt, setEvt] = useState<Evt>(

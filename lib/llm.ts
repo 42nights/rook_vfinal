@@ -7,6 +7,7 @@ import {
   LOCAL_MAX_TOKENS,
   GENERATION_MODEL,
 } from "./constants";
+import { tenant } from "./tenant";
 
 // LIFT-FROM: dataroom/lib/llm.ts + anthropic.ts, generalized into three call
 // shapes Atlas needs: free text (mermaid, prose), structured JSON (wiki pages),
@@ -96,6 +97,7 @@ async function cloudChat(
         ...history.map((m) => ({ role: m.role, content: m.content })),
         { role: "user", content: user },
       ],
+      ...(tenant.slug ? { metadata: { user_id: tenant.slug } } : {}),
     }),
   });
   if (!res.ok) {

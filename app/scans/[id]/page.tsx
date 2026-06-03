@@ -10,10 +10,10 @@ export const dynamic = "force-dynamic";
 
 export default async function ScanDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const scan = getScan(Number(id));
+  const scan = await getScan(id);
   if (!scan) notFound();
-  const repo = getRepo(scan.repo_id);
-  const findings = listFindings(scan.id);
+  const repo = await getRepo(scan.repo_id);
+  const findings = await listFindings(scan._id);
   const validated = findings.filter((f) => f.status === "validated");
   const advisories = findings.filter((f) => f.status === "advisory");
   const inconclusive = findings.filter((f) => f.status === "inconclusive");
@@ -24,13 +24,13 @@ export default async function ScanDetail({ params }: { params: Promise<{ id: str
       <div className="flex items-center gap-2 text-sm text-[var(--fg-muted)] mb-1">
         <Link href="/scans" className="hover:text-[var(--fg)]">Scans</Link>
         <ChevronRight className="h-3.5 w-3.5" />
-        <span className="font-mono text-[var(--fg)]">{repo ? `${repo.owner}/${repo.name}` : `scan ${scan.id}`}</span>
+        <span className="font-mono text-[var(--fg)]">{repo ? `${repo.owner}/${repo.name}` : `scan ${scan._id}`}</span>
       </div>
-      <h1 className="font-serif text-3xl text-[var(--fg)]">Scan #{scan.id}</h1>
+      <h1 className="font-serif text-3xl text-[var(--fg)]">Scan #{scan._id.slice(-6)}</h1>
       {scan.framework && <p className="text-sm text-[var(--fg-subtle)] mt-1">framework: {scan.framework}{scan.target_url ? ` · target ${scan.target_url}` : ""}</p>}
 
       <div className="mt-6">
-        <ScanProgress scanId={scan.id} initialStatus={scan.status} />
+        <ScanProgress scanId={scan._id} initialStatus={scan.status} />
       </div>
 
       {scan.status === "done" && (
@@ -44,7 +44,7 @@ export default async function ScanDetail({ params }: { params: Promise<{ id: str
       {validated.length > 0 && (
         <Section title="Verified findings" icon={<ShieldCheck className="h-4 w-4 text-[var(--accent)]" />}>
           {validated.map((f) => (
-            <FindingRow key={f.id} scanId={scan.id} f={f} />
+            <FindingRow key={f._id} scanId={scan._id} f={f} />
           ))}
         </Section>
       )}
@@ -52,7 +52,7 @@ export default async function ScanDetail({ params }: { params: Promise<{ id: str
       {advisories.length > 0 && (
         <Section title="Supply-chain advisories (OSV — not exploit-verified)" icon={<HelpCircle className="h-4 w-4 text-low" />}>
           {advisories.map((f) => (
-            <FindingRow key={f.id} scanId={scan.id} f={f} />
+            <FindingRow key={f._id} scanId={scan._id} f={f} />
           ))}
         </Section>
       )}
@@ -60,7 +60,7 @@ export default async function ScanDetail({ params }: { params: Promise<{ id: str
       {inconclusive.length > 0 && (
         <Section title="Needs human review" icon={<HelpCircle className="h-4 w-4 text-med" />}>
           {inconclusive.map((f) => (
-            <FindingRow key={f.id} scanId={scan.id} f={f} />
+            <FindingRow key={f._id} scanId={scan._id} f={f} />
           ))}
         </Section>
       )}
@@ -72,7 +72,7 @@ export default async function ScanDetail({ params }: { params: Promise<{ id: str
           </summary>
           <div className="mt-2 space-y-1">
             {dropped.map((f) => (
-              <div key={f.id} className="text-xs font-mono text-[var(--fg-subtle)] px-3 py-1.5 rounded border border-border">
+              <div key={f._id} className="text-xs font-mono text-[var(--fg-subtle)] px-3 py-1.5 rounded border border-border">
                 {f.category} · {f.file_path}:{f.start_line} — {f.disconfirm_reason}
               </div>
             ))}
@@ -105,10 +105,10 @@ function Section({ title, icon, children }: { title: string; icon: React.ReactNo
   );
 }
 
-function FindingRow({ scanId, f }: { scanId: number; f: Finding }) {
+function FindingRow({ scanId, f }: { scanId: string; f: Finding }) {
   return (
     <Link
-      href={`/scans/${scanId}/findings/${f.id}`}
+      href={`/scans/${scanId}/findings/${f._id}`}
       className="flex items-center gap-3 rounded-lg border border-border bg-[var(--bg-elev)] px-4 py-3 hover:border-border-strong transition-colors group"
     >
       <SeverityBadge severity={f.severity} score={f.cvss_score} />

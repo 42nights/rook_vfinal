@@ -27,17 +27,27 @@ function numbered(content: string): string {
     .join("\n");
 }
 
-export function buildCorpus(dir: string, opts: { maxChars?: number; maxPerFile?: number } = {}): Corpus {
+export function buildCorpus(
+  dir: string,
+  opts: { maxChars?: number; maxPerFile?: number; only?: string[] } = {},
+): Corpus {
   // Bigger budget than the original 14k so large repos aren't mostly missed.
   // Tunable via ROOK_CORPUS_MAX_CHARS; kept under the local model's context.
   const maxChars = opts.maxChars ?? Number(process.env.ROOK_CORPUS_MAX_CHARS ?? 40000);
   const maxPerFile = opts.maxPerFile ?? 8000;
+  // PR-focused mode passes `only` (repo-relative changed paths) to restrict the
+  // corpus to the diff. Paths are normalized so a leading "./" or stray
+  // separators don't cause a miss against walkRepo's relative paths.
+  const onlySet = opts.only
+    ? new Set(opts.only.map((p) => p.replace(/^\.\//, "").replace(/\\/g, "/")))
+    : null;
 
   const walked = walkRepo(dir)
     .filter((f) => {
       const info = langForPath(f.path);
       return info && !info.isDoc; // code files only
     })
+    .filter((f) => !onlySet || onlySet.has(f.path.replace(/\\/g, "/")))
     .map((f) => ({ ...f, score: score(f.path) }))
     .sort((a, b) => b.score - a.score);
 

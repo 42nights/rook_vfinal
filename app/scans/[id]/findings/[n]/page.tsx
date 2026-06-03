@@ -12,10 +12,10 @@ export const dynamic = "force-dynamic";
 
 export default async function FindingPage({ params }: { params: Promise<{ id: string; n: string }> }) {
   const { id, n } = await params;
-  const finding = getFinding(Number(n));
-  const scan = getScan(Number(id));
+  const finding = await getFinding(n);
+  const scan = await getScan(id);
   if (!finding || !scan) notFound();
-  const repo = getRepo(finding.repo_id);
+  const repo = await getRepo(finding.repo_id);
   const transcript = finding.exploit_transcript_json ? safeParse(finding.exploit_transcript_json) : null;
   const history = finding.history_json ? safeParse(finding.history_json) : null;
 
@@ -24,7 +24,7 @@ export default async function FindingPage({ params }: { params: Promise<{ id: st
       <div className="flex items-center gap-2 text-sm text-[var(--fg-muted)] mb-2">
         <Link href="/scans" className="hover:text-[var(--fg)]">Scans</Link>
         <ChevronRight className="h-3.5 w-3.5" />
-        <Link href={`/scans/${scan.id}`} className="hover:text-[var(--fg)]">{repo ? `${repo.owner}/${repo.name}` : `scan ${scan.id}`}</Link>
+        <Link href={`/scans/${scan._id}`} className="hover:text-[var(--fg)]">{repo ? `${repo.owner}/${repo.name}` : `scan ${scan._id}`}</Link>
       </div>
 
       <div className="flex items-start justify-between gap-4">
@@ -67,7 +67,7 @@ export default async function FindingPage({ params }: { params: Promise<{ id: st
           <pre className="code-block p-3 whitespace-pre-wrap text-[var(--fg)]">{finding.exploit_script}</pre>
           {finding.category !== "secrets-in-source" && (
             <div className="mt-3">
-              <ExploitReplay findingId={finding.id} exploit={finding.exploit_script} />
+              <ExploitReplay findingId={finding._id} exploit={finding.exploit_script} />
             </div>
           )}
         </Block>
@@ -107,7 +107,7 @@ export default async function FindingPage({ params }: { params: Promise<{ id: st
           <p className="text-sm text-[var(--fg-muted)] mb-3">
             Rook found it and proved it. Hand the finding — with its working exploit as a failing test — to Otis to write the fix PR.
           </p>
-          <SendToOtis findingId={finding.id} />
+          <SendToOtis findingId={finding._id} />
         </Block>
       )}
 
@@ -126,4 +126,3 @@ function Block({ title, children }: { title: string; children: React.ReactNode }
     </section>
   );
 }
-

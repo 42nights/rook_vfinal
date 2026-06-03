@@ -11,9 +11,9 @@ async function main() {
   }
   const t0 = Date.now();
   const { scan, repo, done } = await startScan(ref);
-  console.log(`scanning ${repo.owner}/${repo.name} (scan ${scan.id})`);
+  console.log(`scanning ${repo.owner}/${repo.name} (scan ${scan._id})`);
   let last = "";
-  subscribe(scan.id, (e) => {
+  subscribe(scan._id, (e) => {
     const line = `[${String(Math.round(e.progress * 100)).padStart(3)}%] ${e.phase}`;
     if (line !== last) {
       console.log(line);
@@ -23,13 +23,14 @@ async function main() {
 
   try {
     await done;
-  } catch (err: any) {
-    console.error("\nScan failed:", err?.message ?? err);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("\nScan failed:", msg);
     process.exit(1);
   }
 
-  const s = getScan(scan.id)!;
-  const findings = listFindings(scan.id);
+  const s = (await getScan(scan._id))!;
+  const findings = await listFindings(scan._id);
   console.log(`\n── Done in ${((Date.now() - t0) / 1000).toFixed(1)}s ──`);
   console.log(`candidates: ${s.candidate_count} · validated: ${s.verified_count} · disconfirmed(dropped): ${s.false_positive_count}`);
   console.log("\nFindings:");

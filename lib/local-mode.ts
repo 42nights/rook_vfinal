@@ -28,7 +28,7 @@ if (process.env.GITHUB_TOKEN || process.env.GITHUB_APP_ID) {
   ALLOWED_HOSTS.add("api.github.com");
   ALLOWED_HOSTS.add("uploads.github.com");
 }
-for (const k of ["OTIS_URL", "SLACK_WEBHOOK_URL"]) {
+for (const k of ["OTIS_URL", "SLACK_WEBHOOK_URL", "CASTLE_API_URL"]) {
   const v = process.env[k];
   if (v) {
     try {

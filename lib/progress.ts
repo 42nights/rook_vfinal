@@ -3,7 +3,7 @@
 // in-process waiter subscribe. Survives module reloads via globalThis.
 
 export type ProgressEvent = {
-  scanId: number;
+  scanId: string;
   status: string;
   phase: string;
   progress: number; // 0..1
@@ -16,10 +16,12 @@ type Listener = (e: ProgressEvent) => void;
 
 declare global {
   // eslint-disable-next-line no-var
-  var __rook_progress: {
-    listeners: Map<number, Set<Listener>>;
-    last: Map<number, ProgressEvent>;
-  } | undefined;
+  var __rook_progress:
+    | {
+        listeners: Map<string, Set<Listener>>;
+        last: Map<string, ProgressEvent>;
+      }
+    | undefined;
 }
 
 function bus() {
@@ -46,11 +48,11 @@ export function publish(e: ProgressEvent) {
   }
 }
 
-export function lastProgress(scanId: number): ProgressEvent | null {
+export function lastProgress(scanId: string): ProgressEvent | null {
   return bus().last.get(scanId) ?? null;
 }
 
-export function subscribe(scanId: number, l: Listener): () => void {
+export function subscribe(scanId: string, l: Listener): () => void {
   const b = bus();
   let set = b.listeners.get(scanId);
   if (!set) {

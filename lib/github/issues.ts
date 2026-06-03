@@ -20,6 +20,7 @@ export async function openIssue(
   repo: string,
   finding: FindingRow,
   installationId?: number,
+  body?: string,
 ): Promise<{ url: string; number: number } | null> {
   const ok = octokit(installationId);
   if (!ok) return null;
@@ -28,7 +29,8 @@ export async function openIssue(
       owner,
       repo,
       title: `[Rook] ${finding.title}`,
-      body: buildFindingReport(finding),
+      // Caller can supply the §6.2 synthetic-issue body; default to the report.
+      body: body ?? buildFindingReport(finding),
       labels: ["rook", SEV_LABEL[finding.severity] ?? "security"],
     });
     return { url: res.data.html_url, number: res.data.number };

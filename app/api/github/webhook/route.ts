@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifySignature } from "@/lib/github/webhook";
 import { githubAppConfig } from "@/lib/github/app";
 import { startScan } from "@/lib/scan-runner";
+import { runPrPipeline } from "@/lib/pr-pipeline";
+import { parsePullRequestTrigger } from "@/lib/github/pr-event";
 import { parseRepoRef, isRefAllowedFromApi } from "@/lib/git";
 
 export const runtime = "nodejs";
@@ -36,6 +38,19 @@ export async function POST(req: NextRequest) {
 
   const event = req.headers.get("x-github-event");
   const payload = JSON.parse(raw);
+
+  // PR events: scan the diff and leave review comments (spec §3). Ack fast and
+  // run the pipeline out of band — GitHub wants a <10s response.
+  if (event === "pull_request") {
+    const trigger = parsePullRequestTrigger(payload);
+    if (trigger.kind === "ignore") return NextResponse.json({ ok: true, ignored: trigger.reason });
+    const input = trigger.input;
+    void runPrPipeline(input).catch((e) =>
+      console.error(`[webhook] PR pipeline failed for ${input.owner}/${input.name}#${input.prNumber}:`, e?.message ?? e),
+    );
+    return NextResponse.json({ ok: true, scanning_pr: input.prNumber });
+  }
+
   const targets: string[] = [];
   if (event === "installation" || event === "installation_repositories") {
     const repos = payload.repositories ?? payload.repositories_added ?? [];

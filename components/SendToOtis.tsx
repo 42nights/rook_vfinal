@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Send, Loader2, ArrowRight } from "lucide-react";
 
-export function SendToOtis({ findingId }: { findingId: number }) {
+export function SendToOtis({ findingId }: { findingId: string }) {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; url?: string; note: string; payload?: any } | null>(null);
 

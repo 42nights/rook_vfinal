@@ -8,7 +8,7 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci
 COPY . .
-RUN npm run build
+RUN npm run build && chmod +x docker-entrypoint.sh
 # Run as the unprivileged `node` user, not root. (Untrusted target apps spawned
 # during a scan therefore also run unprivileged; for stronger isolation set
 # ROOK_SANDBOX=docker so exploits/targets run in their own container.)
@@ -17,4 +17,7 @@ USER node
 ENV NODE_ENV=production
 ENV ROOK_MODE=local
 EXPOSE 3000
-CMD ["npm", "run", "start"]
+# Entrypoint routes subcommands: `start` (default, serves the app) and `scan-pr`
+# (one-shot PR scan for the self-hosted GitHub Action, spec §9.4).
+ENTRYPOINT ["./docker-entrypoint.sh"]
+CMD ["start"]

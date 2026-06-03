@@ -3,25 +3,42 @@ import { ShieldCheck, ArrowUpRight, Bug } from "lucide-react";
 import { ScanInput } from "@/components/ScanInput";
 import { listScans } from "@/lib/scans";
 import { getRepo } from "@/lib/repos";
-import { db } from "@/lib/db";
+import { convex, api } from "@/lib/db/convex-client";
 import { timeAgo } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-export default function Landing() {
-  const scans = listScans().filter((s) => s.status === "done").slice(0, 5);
-  const week = db
-    .prepare("SELECT COUNT(*) AS scans FROM scans WHERE status='done' AND created_at > ?")
-    .get(Date.now() - 7 * 86400000) as { scans: number };
-  // Count exploit-confirmed (non-secrets) and static-proven secrets separately
-  // so the displayed stat copy is accurate for each type.
-  const exploitConfirmed = db
-    .prepare("SELECT COUNT(*) AS n FROM findings WHERE status='validated' AND category != 'secrets-in-source'")
-    .get() as { n: number };
-  const staticProven = db
-    .prepare("SELECT COUNT(*) AS n FROM findings WHERE status='validated' AND category = 'secrets-in-source'")
-    .get() as { n: number };
-  const verified = { n: exploitConfirmed.n + staticProven.n };
+export default async function Landing() {
+  const allScans = await listScans();
+  const scans = allScans.filter((s) => s.status === "done").slice(0, 5);
+
+  const weekSince = Date.now() - 7 * 86400000;
+  const weekScans = allScans.filter(
+    (s) => s.status === "done" && s.created_at > weekSince,
+  ).length;
+
+  // Findings stats: query all findings across all done scans
+  const allFindings = await Promise.all(
+    allScans
+      .filter((s) => s.status === "done")
+      .map((s) =>
+        convex.query(api.findings.listByScan, { scan_id: s._id }),
+      ),
+  ).then((arrays) => arrays.flat());
+
+  const exploitConfirmed = allFindings.filter(
+    (f) => f.status === "validated" && f.category !== "secrets-in-source",
+  ).length;
+  const staticProven = allFindings.filter(
+    (f) => f.status === "validated" && f.category === "secrets-in-source",
+  ).length;
+  const verifiedTotal = exploitConfirmed + staticProven;
+
+  const repoCache = new Map<string, Awaited<ReturnType<typeof getRepo>>>();
+  async function getCachedRepo(id: string) {
+    if (!repoCache.has(id)) repoCache.set(id, await getRepo(id));
+    return repoCache.get(id)!;
+  }
 
   return (
     <div className="mx-auto max-w-3xl px-5 sm:px-6 pt-16 sm:pt-24 pb-24">
@@ -45,17 +62,17 @@ export default function Landing() {
         <section className="mt-14">
           <h2 className="text-[11px] uppercase tracking-[0.18em] text-[var(--fg-muted)] mb-3">Recent scans</h2>
           <div className="space-y-2">
-            {scans.map((s) => {
-              const repo = getRepo(s.repo_id);
+            {await Promise.all(scans.map(async (s) => {
+              const repo = await getCachedRepo(s.repo_id);
               return (
                 <Link
-                  key={s.id}
-                  href={`/scans/${s.id}`}
+                  key={s._id}
+                  href={`/scans/${s._id}`}
                   className="flex items-center gap-3 rounded-lg border border-border bg-[var(--bg-elev)] px-4 py-3 hover:border-border-strong transition-colors group"
                 >
                   <Bug className="h-4 w-4 text-[var(--accent)] shrink-0" />
                   <div className="min-w-0 flex-1">
-                    <div className="font-mono text-sm text-[var(--fg)] truncate">{repo ? `${repo.owner}/${repo.name}` : `scan ${s.id}`}</div>
+                    <div className="font-mono text-sm text-[var(--fg)] truncate">{repo ? `${repo.owner}/${repo.name}` : `scan ${s._id}`}</div>
                     <div className="text-xs text-[var(--fg-subtle)]">
                       {s.verified_count} verified · {s.false_positive_count} false-positives dropped · {timeAgo(s.updated_at)}
                     </div>
@@ -63,22 +80,22 @@ export default function Landing() {
                   <ArrowUpRight className="h-4 w-4 text-[var(--fg-subtle)] group-hover:text-[var(--accent)] transition-colors" />
                 </Link>
               );
-            })}
+            }))}
           </div>
         </section>
       )}
 
       <section className="mt-12 grid grid-cols-2 gap-3">
         <div className="rounded-xl border border-border bg-[var(--bg-sunken)] px-5 py-4">
-          <div className="text-3xl font-serif text-[var(--fg)]">{week.scans}</div>
+          <div className="text-3xl font-serif text-[var(--fg)]">{weekScans}</div>
           <div className="text-xs text-[var(--fg-muted)] mt-1">scans this week</div>
         </div>
         <div className="rounded-xl border border-border bg-[var(--bg-sunken)] px-5 py-4">
           <div className="text-3xl font-serif text-[var(--accent)] flex items-baseline gap-2">
-            {verified.n} <ShieldCheck className="h-5 w-5" />
+            {verifiedTotal} <ShieldCheck className="h-5 w-5" />
           </div>
           <div className="text-xs text-[var(--fg-muted)] mt-1">
-            verified findings ({exploitConfirmed.n} exploit-confirmed{staticProven.n > 0 ? ` · ${staticProven.n} static-proven` : ""})
+            verified findings ({exploitConfirmed} exploit-confirmed{staticProven > 0 ? ` · ${staticProven} static-proven` : ""})
           </div>
         </div>
       </section>

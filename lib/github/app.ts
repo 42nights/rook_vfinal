@@ -40,3 +40,18 @@ export function appOctokit(installationId: number): Octokit | null {
     auth: { appId: cfg.appId, privateKey: cfg.privateKey, installationId },
   });
 }
+
+// Mint a short-lived installation access token (1h TTL, managed by the SDK) for
+// authenticating a `git fetch` of a private repo. Never stored; passed only into
+// the clone URL and scrubbed from any error. Returns null if the App isn't set up.
+export async function installationToken(installationId: number): Promise<string | null> {
+  const cfg = githubAppConfig();
+  if (!cfg) return null;
+  try {
+    const auth = createAppAuth({ appId: cfg.appId, privateKey: cfg.privateKey, installationId });
+    const { token } = await auth({ type: "installation" });
+    return token;
+  } catch {
+    return null;
+  }
+}

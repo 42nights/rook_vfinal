@@ -6,8 +6,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
-  const scanId = Number(req.nextUrl.searchParams.get("scanId"));
-  const scan = getScan(scanId);
+  const scanId = req.nextUrl.searchParams.get("scanId") ?? "";
+  const scan = await getScan(scanId);
   if (!scan) return new Response("not found", { status: 404 });
 
   const encoder = new TextEncoder();

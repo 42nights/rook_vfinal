@@ -1,4 +1,4 @@
-import { db } from "../lib/db";
-const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all() as { name: string }[];
-console.log("Rook DB ready. Tables:");
-for (const t of tables) console.log("  -", t.name);
+// SQLite migration script — replaced by Convex.
+// Schema and tables are managed via `npx convex deploy`.
+// This file is kept so the `npm run migrate` script doesn't break.
+console.log("Rook now uses Convex for persistence. Run `npx convex deploy` to deploy schema changes.");

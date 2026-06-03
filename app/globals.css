@@ -16,6 +16,7 @@
     --border: oklch(26% 0.012 25);
     --border-strong: oklch(36% 0.016 25);
 
+    --tenant-primary: var(--accent);       /* overridden via <style> in layout when ROOK_PRIMARY_COLOR is set */
     --accent: oklch(68% 0.2 22);          /* coral/red */
     --accent-fg: oklch(98% 0.01 25);
     --accent-soft: oklch(30% 0.09 22);

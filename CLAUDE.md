@@ -50,6 +50,40 @@ default.**
 - `lib/otis.ts` — Send-to-Otis bridge (finding → GitHub issue + failing exploit)
 - `app/` — App Router pages + API routes (scan, stream, findings/replay, findings/otis, webhook)
 
+## Deploy as a Castle template
+
+Rook ships as a Castle template: each customer gets their own Railway service + `data/rook.db`, isolated by default.
+
+**Tenant env contract**
+
+| Var | Purpose |
+|---|---|
+| `ROOK_TENANT_SLUG` | Activates tenant mode; used as Anthropic `metadata.user_id` for cost attribution |
+| `ROOK_TENANT_DISPLAY_NAME` | White-label name in the UI (default: "Rook") |
+| `ROOK_TENANT_PUBLIC_URL` | Public base URL for PR comment deeplinks |
+| `ROOK_LOGO_URL` | Favicon override |
+| `ROOK_PRIMARY_COLOR` | CSS color overriding the default coral `--accent` |
+| `CASTLE_DEPLOYMENT_ID` | Castle deployment ID for event backlinks + budget admin URL |
+| `CASTLE_API_URL` | Castle API for deployment events (`scan_started`, `scan_completed`, `budget_exceeded`) |
+| `CASTLE_WEBHOOK_SECRET` | HMAC secret on `x-castle-secret` header |
+| `ROOK_DAILY_BUDGET_USD` | Daily spend cap; gate fires before any scan (default 50) |
+
+**Pattern A — per-tenant Railway service + data/rook.db**
+
+Each tenant is a separate Railway deployment of this repo. Set `ROOK_TENANT_SLUG` and the Castle vars. The SQLite database at `data/rook.db` is tenant-local with no cross-tenant data.
+
+**GitHub App via Castle redirect**
+
+Castle provisions a shared GitHub App and redirects the OAuth install to the tenant's webhook endpoint. No per-tenant App registration needed.
+
+**Daily budget cap**
+
+`ROOK_DAILY_BUDGET_USD` (default 50) gates every PR scan. When the limit is hit, Rook posts a review comment explaining the block and emits a `budget_exceeded` Castle event. Raise the cap at `admin.42nights.dev/deployments/<CASTLE_DEPLOYMENT_ID>`.
+
+**Local-model option**
+
+Regulated customers who need zero cloud touch set `ROOK_MODE=local`. See `docs/self-hosted.md`.
+
 ## Conventions
 - TypeScript strict, no `any`/`@ts-ignore`. Tailwind. Match existing file style.
 - Global singletons (scan/replay port allocators, inflight sets, opening-issue
