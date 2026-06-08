@@ -19,10 +19,10 @@ export default function SettingsPage() {
 
       <div className="mt-8 space-y-3">
         <Row icon={<ShieldCheck className="h-4 w-4" />} label="Model mode" value={cloud ? "Cloud (Anthropic)" : "Local"} on={!cloud} note={cloud ? "ROOK_MODE=cloud" : "ROOK_MODE=local — no outbound model calls"} />
-        <Row icon={<Box className="h-4 w-4" />} label="Exploit sandbox" value={sandbox === "docker" ? "Docker" : "Local subprocess (guarded)"} on note={sandbox === "docker" ? "ROOK_SANDBOX=docker" : "ROOK_SANDBOX=local — set =docker for container isolation"} />
+        <Row icon={<Box className="h-4 w-4" />} label="Exploit sandbox" value={sandbox === "docker" ? "Docker" : sandbox === "off" || sandbox === "none" ? "Off (no host start)" : "Local subprocess (guarded)"} on={sandbox !== "off" && sandbox !== "none"} note={sandbox === "docker" ? "ROOK_SANDBOX=docker" : sandbox === "off" || sandbox === "none" ? "ROOK_SANDBOX=off — target app is never started on the host" : "ROOK_SANDBOX=local — guarded host subprocess; set =docker for container isolation or =off to disable host start"} />
         <Row icon={<Cloud className="h-4 w-4" />} label="OSV supply-chain scan" value={osv ? "Enabled" : "Off"} on={osv} note="ROOK_OSV=true allows api.osv.dev for dependency vuln lookups" />
         <Row icon={<Github className="h-4 w-4" />} label="GitHub App" value={appOn ? "Configured" : "Not configured"} on={appOn} note="Install on a repo for scan-on-push + auto-issues" />
-        <Row icon={<Box className="h-4 w-4" />} label="Send to Otis" value={otis ? "Wired" : "Shows handoff only"} on={otis} note="OTIS_URL — hands findings to the 42n-bot implementer" />
+        <Row icon={<Box className="h-4 w-4" />} label="Send to Otis" value={otis ? "Wired" : "Shows handoff only"} on={otis} note="OTIS_URL — hands findings to the Otis implementer" />
         <Row icon={<Bell className="h-4 w-4" />} label="Slack alerts" value={slack ? "Enabled" : "Off"} on={slack} note="SLACK_WEBHOOK_URL for finding notifications" />
       </div>
     </div>

@@ -42,7 +42,34 @@ function readSafe(p: string): string {
   }
 }
 
-function startCommand(dir: string, fw: Framework, port: number): { cmd: string; args: string[]; env: Record<string, string> } | null {
+// Heuristic guard for a repo's own start/dev/smoke script. We run untrusted repo
+// code on the host (default, non-container mode), so an obviously-malicious start
+// script (`curl … | sh`, reverse shells, reads of ~/.ssh / .env) must NOT execute.
+// This is a blast-radius reducer, not a sandbox — real isolation is
+// ROOK_SANDBOX=docker / running Rook in a disposable VM.
+//
+// We deliberately DO allow benign `&&` / `;` chaining: legitimate start scripts
+// routinely chain build+start (`next build && next start`,
+// `node build/server.js && echo ready`). Blocking all chaining silently skipped
+// the dynamic phase for those repos. So we only block genuinely dangerous shapes:
+// pipe-to-shell, reverse shells, and reads of credential files.
+const DANGEROUS_START_PATTERNS: RegExp[] = [
+  /\|\s*(sh|bash|zsh|node|python\d?)\b/i, // pipe-to-interpreter (curl … | sh, … | bash)
+  /\b(curl|wget)\b[^|]*\|\s*\w/i, // fetch piped onward (curl … | <anything>) — exfil/run
+  /\bbash\s+-i\b|\/dev\/tcp\/|\b(nc|ncat)\s+-e\b/i, // reverse shells
+  /\.ssh\b|\.aws\/credentials|\/etc\/passwd|\.env\b/i, // reads of credential files
+];
+
+function isStartScriptSafe(command: string): boolean {
+  return !DANGEROUS_START_PATTERNS.some((re) => re.test(command));
+}
+
+function startCommand(
+  dir: string,
+  fw: Framework,
+  port: number,
+  onLog: (s: string) => void = () => {},
+): { cmd: string; args: string[]; env: Record<string, string> } | null {
   const pkgPath = path.join(dir, "package.json");
   const env = { PORT: String(port), HOST: "127.0.0.1" };
   if (fs.existsSync(pkgPath)) {
@@ -53,9 +80,15 @@ function startCommand(dir: string, fw: Framework, port: number): { cmd: string; 
       return null;
     }
     const scripts = (pkg.scripts as Record<string, string> | undefined) ?? {};
-    if (scripts["bot:smoke"]) return { cmd: "npm", args: ["run", "bot:smoke"], env };
-    if (scripts.start) return { cmd: "npm", args: ["run", "start"], env };
-    if (scripts.dev) return { cmd: "npm", args: ["run", "dev"], env };
+    for (const name of ["bot:smoke", "start", "dev"] as const) {
+      const body = scripts[name];
+      if (!body) continue;
+      if (!isStartScriptSafe(body)) {
+        onLog(`refusing to run "${name}" — script looks unsafe to execute on the host; skipping dynamic phase`);
+        return null;
+      }
+      return { cmd: "npm", args: ["run", name], env };
+    }
   }
   if (fw === "flask") return { cmd: "python3", args: ["-m", "flask", "run", "--port", String(port)], env };
   if (fw === "fastapi") return { cmd: "python3", args: ["-m", "uvicorn", "main:app", "--port", String(port)], env };
@@ -171,7 +204,16 @@ export async function startTarget(
 ): Promise<TargetServer | null> {
   const port = opts.port ?? 4599;
   const onLog = opts.onLog ?? (() => {});
-  const spec = startCommand(dir, fw, port);
+  // Defense-in-depth toggle (advertised in the settings UI): ROOK_SANDBOX=off/none
+  // disables running the untrusted target on the host entirely — the static and
+  // exploit-synthesis phases still run, only the live-target dynamic phase is
+  // skipped. Default (unset / "local") keeps the guarded host subprocess.
+  const sandbox = (process.env.ROOK_SANDBOX ?? "local").toLowerCase();
+  if (sandbox === "off" || sandbox === "none") {
+    onLog("ROOK_SANDBOX=off — skipping host target startup (no untrusted code run on host)");
+    return null;
+  }
+  const spec = startCommand(dir, fw, port, onLog);
   if (!spec) {
     onLog("no start command detected, skipping dynamic phase");
     return null;

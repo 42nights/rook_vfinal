@@ -184,6 +184,11 @@ export async function runScan(scanId: string, prContext?: PrContext): Promise<vo
 
     const corpus = buildCorpus(dir, prContext ? { only: changedCode ?? [] } : {});
     await scanLog(scanId, "info", `corpus: ${corpus.files.length} files${prContext ? " (PR-focused)" : ""}`);
+    if (corpus.truncated) {
+      // Surface the coverage cap so a clean result on a large repo isn't mistaken
+      // for full coverage — the scan only reasoned over the highest-priority slice.
+      await scanLog(scanId, "warn", `coverage capped: repo exceeds the corpus budget (ROOK_CORPUS_MAX_CHARS=${process.env.ROOK_CORPUS_MAX_CHARS ?? 40000}); scanned the top ${corpus.files.length} highest-priority files — a clean result here is partial, not full-coverage`);
+    }
 
     if (prContext && corpus.files.length === 0) {
       await scanLog(scanId, "info", "PR touched no scannable code — nothing to scan");

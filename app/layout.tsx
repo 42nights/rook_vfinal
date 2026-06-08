@@ -33,18 +33,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
-      className={`dark ${GeistSans.variable} ${GeistMono.variable} ${newsreader.variable}`}
+      className={`${GeistSans.variable} ${GeistMono.variable} ${newsreader.variable}`}
       style={{ "--font-display": "var(--font-geist-sans)", "--font-mono-family": "var(--font-geist-mono)" } as React.CSSProperties}
     >
       <head>
         {tenant.logoUrl && <link rel="icon" href={tenant.logoUrl} />}
         {tenant.primaryColor && (
-          <style>{`.dark { --tenant-primary: ${tenant.primaryColor}; --accent: ${tenant.primaryColor}; }`}</style>
+          <style>{`:root, .dark { --tenant-primary: ${tenant.primaryColor}; --accent: ${tenant.primaryColor}; }`}</style>
         )}
       </head>
       <body className="min-h-screen antialiased bg-[var(--bg)] text-[var(--fg)]">
         <Shell>{children}</Shell>
-        <Toaster position="top-right" theme="dark" />
+        <Toaster position="top-right" theme="light" />
       </body>
     </html>
   );

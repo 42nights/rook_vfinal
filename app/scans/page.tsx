@@ -37,7 +37,7 @@ export default async function ScansPage() {
               <div className="min-w-0 flex-1">
                 <div className="font-mono text-sm text-[var(--fg)] truncate">{repo ? `${repo.owner}/${repo.name}` : `scan ${s._id}`}</div>
                 <div className="text-xs text-[var(--fg-subtle)]">
-                  {active ? `${s.phase ?? s.status} · ${Math.round(s.progress * 100)}%` : s.status === "error" ? s.error_message?.slice(0, 70) : `${s.verified_count} verified · ${s.false_positive_count} dropped · ${timeAgo(s.updated_at)}`}
+                  {active ? `${s.phase ?? s.status} · ${Math.round(s.progress * 100)}%` : s.status === "error" ? "Scan failed — open to retry" : `${s.verified_count} verified · ${s.false_positive_count} dropped · ${timeAgo(s.updated_at)}`}
                 </div>
               </div>
               {active ? (

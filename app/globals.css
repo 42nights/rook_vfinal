@@ -2,10 +2,38 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Rook — "breaks your app before someone else does". Offensive-security dark
-   theme: tinted black, coral/red accent, severity-coded signal colors. */
+/* Rook — "breaks your app before someone else does". Offensive-security theme:
+   light by default (spec, matches the Otis sibling), coral/red accent, severity-
+   coded signal colors. The dark palette is retained under .dark for the toggle. */
 
 @layer base {
+  :root {
+    --bg: oklch(99% 0.003 60);
+    --bg-elev: oklch(100% 0 0);
+    --bg-sunken: oklch(96.5% 0.004 60);
+    --fg: oklch(22% 0.012 30);
+    --fg-muted: oklch(44% 0.012 30);
+    --fg-subtle: oklch(60% 0.012 30);
+    --border: oklch(91% 0.006 40);
+    --border-strong: oklch(84% 0.01 40);
+
+    --tenant-primary: var(--accent);       /* overridden via <style> in layout when ROOK_PRIMARY_COLOR is set */
+    --accent: oklch(58% 0.21 22);         /* coral/red */
+    --accent-fg: oklch(99% 0.01 25);
+    --accent-soft: oklch(92% 0.06 22);
+
+    --crit: oklch(55% 0.24 18);           /* critical: deep red */
+    --high: oklch(62% 0.19 40);           /* high: orange */
+    --med: oklch(68% 0.15 75);            /* medium: amber */
+    --low: oklch(58% 0.13 230);           /* low/info: azure */
+
+    --radius: 0.5rem;
+    --radius-lg: 0.875rem;
+    --radius-xl: 1.25rem;
+
+    color-scheme: light;
+  }
+
   .dark {
     --bg: oklch(15% 0.012 25);
     --bg-elev: oklch(18% 0.014 25);
@@ -16,7 +44,6 @@
     --border: oklch(26% 0.012 25);
     --border-strong: oklch(36% 0.016 25);
 
-    --tenant-primary: var(--accent);       /* overridden via <style> in layout when ROOK_PRIMARY_COLOR is set */
     --accent: oklch(68% 0.2 22);          /* coral/red */
     --accent-fg: oklch(98% 0.01 25);
     --accent-soft: oklch(30% 0.09 22);
@@ -26,12 +53,8 @@
     --med: oklch(82% 0.15 75);            /* medium: amber */
     --low: oklch(74% 0.11 230);           /* low/info: azure */
 
-    --radius: 0.5rem;
-    --radius-lg: 0.875rem;
-    --radius-xl: 1.25rem;
+    color-scheme: dark;
   }
-
-  :root { color-scheme: dark; }
 
   html, body {
     background: var(--bg);

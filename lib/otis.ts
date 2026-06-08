@@ -92,7 +92,7 @@ export async function sendToOtis(finding: FindingRow): Promise<{ ok: boolean; ur
   if (!payload) return { ok: false, payload: null, note: "repo not found" };
   const otisUrl = process.env.OTIS_URL;
   if (!otisUrl) {
-    return { ok: false, payload, note: "OTIS_URL not configured — showing the handoff Otis would receive. Set OTIS_URL to the 42n-bot base URL to wire the implementer." };
+    return { ok: false, payload, note: "OTIS_URL not configured — showing the handoff Otis would receive. Set OTIS_URL to the Otis base URL to wire the implementer." };
   }
   const syntheticNote = payload.issue_url ? "" : " (synthetic issue number — set GITHUB_TOKEN so Rook can open the real issue first)";
   try {

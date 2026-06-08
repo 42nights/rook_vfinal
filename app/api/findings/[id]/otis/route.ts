@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getFinding } from "@/lib/scans";
 import { sendToOtis } from "@/lib/otis";
+import { checkApiAuth } from "@/lib/api-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const unauthorized = checkApiAuth(req);
+  if (unauthorized) return unauthorized;
+
   const { id } = await params;
   const finding = await getFinding(id);
   if (!finding) return NextResponse.json({ error: "not found" }, { status: 404 });

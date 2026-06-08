@@ -62,7 +62,7 @@ export default async function FixPage({
         <p className="text-[var(--fg)] font-medium mb-2 inline-flex items-center gap-2">
           <ShieldCheck className="h-4 w-4 text-[var(--accent)]" /> What happens when you hand this off
         </p>
-        Otis (the 42n-bot implementer) receives the finding as a GitHub issue with the working exploit as a failing
+        Otis (the implementer) receives the finding as a GitHub issue with the working exploit as a failing
         test, plans a fix, implements it, and opens a fix PR — then verifies the exploit no longer succeeds before
         marking it done.{" "}
         {return_to === "github" && prUrl ? (

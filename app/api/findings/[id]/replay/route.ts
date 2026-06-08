@@ -3,6 +3,7 @@ import { getFinding } from "@/lib/scans";
 import { getRepo } from "@/lib/repos";
 import type { ExploitSpec } from "@/lib/sandbox/runner";
 import { safeParse } from "@/lib/utils";
+import { checkApiAuth } from "@/lib/api-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,7 +32,10 @@ function releaseReplayPort(port: number): void {
   globalThis.__rook_replay_ports?.delete(port);
 }
 
-export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const unauthorized = checkApiAuth(req);
+  if (unauthorized) return unauthorized;
+
   const { id } = await params;
   const findingId = id;
   if (replayInflight().has(findingId)) {

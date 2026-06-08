@@ -30,7 +30,11 @@ export default async function ScanDetail({ params }: { params: Promise<{ id: str
       {scan.framework && <p className="text-sm text-[var(--fg-subtle)] mt-1">framework: {scan.framework}{scan.target_url ? ` · target ${scan.target_url}` : ""}</p>}
 
       <div className="mt-6">
-        <ScanProgress scanId={scan._id} initialStatus={scan.status} />
+        <ScanProgress
+          scanId={scan._id}
+          initialStatus={scan.status}
+          retryRef={repo && repo.owner !== "local" ? `${repo.owner}/${repo.name}` : undefined}
+        />
       </div>
 
       {scan.status === "done" && (
